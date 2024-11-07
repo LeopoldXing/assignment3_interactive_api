@@ -1,8 +1,13 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 from PIL import Image
 import io
+import nltk
 
 app = Flask(__name__)
+
+# Download necessary NLTK data files for tokenization and POS tagging
+nltk.download('punkt')
+nltk.download('averaged_perceptron_tagger')
 
 
 @app.route('/')
@@ -19,12 +24,12 @@ def index():
                     "output_format": "The desired output format. Available formats: JPEG, PNG, BMP, GIF."
                 }
             },
-            "": {
-                "method": "GET or POST",
-                "description": "Description of your assigned package functionality.",
-                "endpoint": "/your_route",
+            "tokenize": {
+                "method": "POST",
+                "description": "Get token and tag of a provided sentence.",
+                "endpoint": "/tokenize",
                 "parameters": {
-                    "input": "User input required by your assigned package."
+                    "sentence": "Sentence provided by the user."
                 }
             }
         }
@@ -40,7 +45,7 @@ def convert_image():
     image_file = request.files['image']
     output_format = request.form['output_format'].upper()
 
-    if output_format not in ['JPEG', 'jpg', 'PNG', 'BMP', 'GIF']:
+    if output_format not in ['JPEG', 'PNG', 'BMP', 'GIF']:
         return jsonify({'error': 'Unsupported output format.'}), 400
 
     try:
@@ -53,9 +58,23 @@ def convert_image():
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/pyaztro', methods=['GET'])
-def pyaztro():
-    pass
+@app.route('/tokenize', methods=['POST'])
+def tokenize():
+    sentence = request.form.get('sentence', '')
+
+    if not sentence:
+        return jsonify({"error": "No sentence provided"}), 400
+
+    # Tokenize and tag the sentence
+    tokens = nltk.word_tokenize(sentence)
+    tagged = nltk.pos_tag(tokens)
+
+    res = {
+        "sentence": sentence,
+        "tokens": tokens,
+        "tagged": tagged
+    }
+    return jsonify(res)
 
 
 if __name__ == '__main__':
